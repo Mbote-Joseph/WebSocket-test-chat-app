@@ -1,0 +1,102 @@
+// Copyright 2025 josephmbote
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     https://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+let socket = null;
+const statusElement = document.getElementById('status');
+const messagesElement = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function connectWebSocket(){
+    console.log(`Connecting to WebSocket server...`);
+    socket = new WebSocket('ws://localhost:9001');
+
+    socket.onopen = function(event) {
+        console.log(`WebSocket connection opened`);
+        updatedStatus('connected', 'Connected to server');
+        enableControls(true);
+        addMessage('System: Connected to Server', 'server-message');
+    };
+
+    socket.onmessage = function(event){
+        console.log('Message received:', event.data);
+        addMessage(`Server: ${event.data} server-message`);
+    };
+
+    socket.onclose = function(event){
+        console.log(`WebSocket connection closed`);
+        updatedStatus('disconnected', 'Disconnected from server');
+        enableControls(false);
+        addMessage('System: Connection closed','server-message');
+    };
+
+    socket.onerror = function(error){
+        console.error(`WebSocket error:`, error);
+        updatedStatus('error', 'Connection error');
+        enableControls(false);
+        addMessage('System: connection error - make sure server is running', 'server-message');
+    };
+}
+
+function disconnectWebSocket(){
+    if (socket && socket.readyState === WebSocket.OPEN){
+        console.log(`Closing WebSocket connection...`);
+        socket.close();
+    }
+}
+
+function sendMessage(){
+    const message = messageInput.ariaValueMax.trim();
+
+    if(!message){
+        alert(`Please enter a message!`);
+        return;
+    }
+
+    if (socket && socket.readyState === WebSocket.OPEN){
+        console.log(`Sending message: ${message}`);
+        socket.sendMessage(message);
+        addMessage(`You: ${message} client-message`);
+        messageInput.value = '';
+    }else {
+        alert(`WebSocket is not connected!`)
+    }
+}
+
+function updatedStatus(state, text){
+    statusElement.className = 'status ' + state;
+    statusElement.textContent = text;
+}
+
+function enableControls(connected){
+    messageInput.disabled = !connected;
+    sendBtn.disabled = !connected;
+}
+
+function addMessage(text, className){
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + className;
+    messageDiv.textContent = text;
+    messagesElement.appendChild(messageDiv);
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+}
+
+// Allow Sending messages by pressing Enter
+// messageInput.addEventListener('keypress',  function(event){
+//     if (event.key === 'Enter'){
+//         sendMessage();
+//     }
+// });
+
+enableControls(false)
